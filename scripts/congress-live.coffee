@@ -28,7 +28,7 @@ module.exports = (robot) ->
                   metadata = JSON.parse(body)
                   liveStatus = metadata.items[0].snippet.liveBroadcastContent
                   if liveStatus=='live'
-                    msg.send("Row" + idx + ' ' + row[1] + ' ' + "@youtube")
+                    msg.send("Row" + (idx+1) + ' ' + row[1] + ' ' + "@youtube")
             id = row[0].match(/ustream.tv\/embed\/(.*)/)
             if id
               robot.http("http://api.ustream.tv/json/channel/"+id[1]+"/getValueOf/status")
@@ -36,4 +36,4 @@ module.exports = (robot) ->
                   metadata = JSON.parse(body)
                   liveStatus = metadata.results
                   if liveStatus=='live'
-                    msg.send("Row" + idx + ' ' + row[1] + ' ' + "@ustream.tv")
+                    msg.send("Row" + (idx+1) + ' ' + row[1] + ' ' + "@ustream.tv")
