@@ -38,6 +38,37 @@ module.exports = (robot) ->
   robot.hear /(http|ftp|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?/i, (msg) ->
     url = msg.match[0]
     httpResponse = (url) ->
+      msg
+        .http(url)
+        .get() (err, res, body) ->
+          if res.statusCode is 301 or res.statusCode is 302
+            httpResponse(res.headers.location)
+          else if res.statusCode is 200
+            if res.headers['content-type'].indexOf('text/html') != 0
+              return
+
+            handler = new HtmlParser.DefaultHandler()
+            parser  = new HtmlParser.Parser handler
+            parser.parseComplete body
+
+            # abort if soupselect runs out of stack space
+            try
+              results = (Select handler.dom, "head title")
+            catch RangeError
+              return
+
+            processResult = (elem) ->
+                unEntity(elem.children[0].data.replace(/(\r\n|\n|\r)/gm,"").trim())
+            if results[0]
+              msg.send processResult(results[0])
+            else
+              results = (Select handler.dom, "title")
+              if results[0]
+                msg.send processResult(results[0])
+          else
+            msg.send "Error " + res.statusCode
+
+    httpNonUTF8CharsetResponse = (url) ->
       request({ url: url, encoding: null }, 
         (err, res, body) ->
           if res.statusCode is 301 or res.statusCode is 302
@@ -87,7 +118,9 @@ module.exports = (robot) ->
             httpResponse(url)
     if url.match /https?:\/\/(mobile\.)?twitter\.com/i
       console.log "Twitter link; ignoring"
+    else if url.match /https?:\/\/(.*)facebook\.com/i
+      httpResponse(url)
     else if url.match /^http\:\/\/bit\.ly/
       httpBitlyResponse(url)
     else
-      httpResponse(url)
+      httpNonUTF8CharsetResponse(url)
